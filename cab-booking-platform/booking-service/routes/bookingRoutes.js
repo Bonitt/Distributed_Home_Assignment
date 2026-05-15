@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
 
 });
 
-router.get('customer/:customerId/current', async (req, res) => {
+router.get('/customer/:customerId/current', async (req, res) => {
     try{
         const currentBookings = await Booking.find({ customerId: req.params.customerId, status: 'current' }).sort({dateTime: 1});
 
