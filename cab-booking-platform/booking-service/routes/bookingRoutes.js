@@ -23,8 +23,23 @@ router.post('/', async (req, res) => {
                 console.log("[EVENT ERROR] Failed to send discount notification:", eventError.message);
             }
         }
+        
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+
+        setTimeout(async () => {
+            try {
+                const message = `Your ${cabType} cab is ready to pick you up at ${startLocation} for your trip to ${endLocation}`;
+                
+                await axios.post(`http://localhost:3001/api/customers/${customerId}/notifications`, {
+                    message: message,
+                    type: "cab_ready"
+                });
+                console.log(`[EVENT FIRED] Cab ready notification sent for booking ID: ${newBooking._id}`);
+            } catch (eventError) {
+                console.log("[EVENT ERROR] Failed to send cab ready notification:", eventError.message);
+            }
+        }, 180000); 
 
     } catch (error) {
         res.status(500).json({ message: 'Error creating booking', error: error.message });
