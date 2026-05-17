@@ -1,21 +1,34 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const Booking = require('../models/Booking');
 
 router.post('/', async (req, res) => {
-    try{
+    try {
         const { customerId, startLocation, endLocation, dateTime, passengers, cabType } = req.body;
-
-        const newBooking = new Booking({ customerId, startLocation, endLocation, dateTime, passengers, cabType, status: 'current' });
-
+        
+        const newBooking = new Booking({ customerId, startLocation, endLocation, dateTime, passengers, cabType });
         await newBooking.save();
 
-        res.status(201).json({ message: 'Booking created successfully', bookingId: newBooking._id });
+        const totalBookings = await Booking.countDocuments({ customerId: customerId });
 
-    }catch(error){
-        res.status(500).json({ message: 'Error creating booking' });
+        if (totalBookings === 3) {
+            try {
+                await axios.post(`http://localhost:3001/api/customers/${customerId}/notifications`, {
+                    message: "Congratulations! You have unlocked a discount multiplier for completing 3 rides!",
+                    type: "discount"
+                });
+                console.log(`[EVENT FIRED] Discount notification sent to customer: ${customerId}`);
+            } catch (eventError) {
+                console.log("[EVENT ERROR] Failed to send discount notification:", eventError.message);
+            }
+        }
+
+        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating booking', error: error.message });
     }
-
 });
 
 router.get('/customer/:customerId/current', async (req, res) => {

@@ -69,4 +69,25 @@ router.get('/:id/notifications', async (req,res) => {
 
 });
 
+router.post('/:customerId/notifications', async (req, res) => {
+    try{
+        const { message, type } = req.body;
+
+        const updatedCustomer = await Customer.findByIdAndUpdate(
+            req.params.customerId,
+            { $push: { notifications: { message, type, date: new Date() } } },
+            { new: true }
+        );
+
+        if(!updatedCustomer){
+            return res.status(404).json({ message: 'Customer not found' });
+        }
+
+        res.status(200).json({ message: 'Notification added successfully' });
+
+    }catch(error){
+        res.status(500).json({ message: 'Error adding notification' });
+    }
+});
+
 module.exports = router;
