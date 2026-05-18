@@ -58,7 +58,6 @@ router.post('/pay', async (req, res) => {
             dep_lat, dep_lng, arr_lat, arr_lng 
         } = req.body;
 
-        // Task 3: Over 8 passengers is not allowed
         if (passengers > 8) { 
             return res.status(400).json({ message: 'Maximum passengers allowed is 8' });
         }
