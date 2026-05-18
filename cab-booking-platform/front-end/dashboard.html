@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CabX — Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="dash-wrap">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-name">CabX</div>
+      <div class="brand-sub">Cab Booking Platform</div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-name" id="sidebarName">Loading…</div>
+      <div class="user-email" id="sidebarEmail"></div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" data-page="overview" onclick="showPage('overview', this)">
+        <span class="nav-icon">></span> Overview
+      </div>
+      <div class="nav-item" data-page="bookings" onclick="showPage('bookings', this)">
+        <span class="nav-icon">></span> My Bookings
+      </div>
+      <div class="nav-item" data-page="new-booking" onclick="showPage('new-booking', this)">
+        <span class="nav-icon">></span> New Booking
+      </div>
+
+      <div class="nav-section" style="margin-top:.5rem;">Account</div>
+      <div class="nav-item" data-page="payments" onclick="showPage('payments', this)">
+        <span class="nav-icon">></span> Payments
+      </div>
+      <div class="nav-item" data-page="locations" onclick="showPage('locations', this)">
+        <span class="nav-icon">></span> Saved Locations
+      </div>
+      <div class="nav-item" data-page="inbox" onclick="showPage('inbox', this)">
+        <span class="nav-icon">></span> Inbox
+        <span class="nav-badge" id="inboxBadge" style="display:none"></span>
+      </div>
+      <div class="nav-item" data-page="profile" onclick="showPage('profile', this)">
+        <span class="nav-icon">></span> Profile
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%;" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <section id="page-overview">
+      <div class="page-header">
+        <div>
+          <h2>Overview</h2>
+          <p id="overviewGreeting">Good day!</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showPage('new-booking', document.querySelector('[data-page=new-booking]'))">
+          + New Ride
+        </button>
+      </div>
+      <div class="page-body">
+        <div class="stat-grid">
+          <div class="stat-card" data-icon="">
+            <div class="stat-label">Total Bookings</div>
+            <div class="stat-value" id="statTotal">—</div>
+          </div>
+          <div class="stat-card" data-icon="">
+            <div class="stat-label">Active Rides</div>
+            <div class="stat-value" id="statActive">—</div>
+          </div>
+          <div class="stat-card" data-icon="">
+            <div class="stat-label">Total Spent</div>
+            <div class="stat-value" id="statSpent">—</div>
+            <div class="stat-sub">EUR</div>
+          </div>
+          <div class="stat-card" data-icon="">
+            <div class="stat-label">Unread Notifications</div>
+            <div class="stat-value" id="statInbox">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Recent Bookings</div>
+          <div id="recentBookings"><div class="empty"><div class="empty-icon">-</div><p>No bookings yet.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-bookings" style="display:none">
+      <div class="page-header">
+        <div><h2>My Bookings</h2><p>All your current and past rides</p></div>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-ghost btn-sm" onclick="loadBookings('current')">Current</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadBookings('past')">Past</button>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div id="bookingsList"><div class="empty"><div class="empty-icon">-</div><p>Loading…</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-new-booking" style="display:none">
+      <div class="page-header">
+        <div><h2>New Booking</h2><p>Book your cab in seconds</p></div>
+      </div>
+      <div class="page-body" style="max-width:560px;">
+        <div class="card">
+          <div class="alert alert-error" id="bookingError"></div>
+          <div class="alert alert-success" id="bookingSuccess"></div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Pickup location</label>
+                <input type="text" id="bkFrom" placeholder="Click to set pickup on map" readonly onclick="openMapPicker('bkFrom', 'Pickup')" style="cursor:pointer;" />
+              </div>
+              <div class="form-group">
+                <label>Destination</label>
+                <input type="text" id="bkTo" placeholder="Click to set destination on map" readonly onclick="openMapPicker('bkTo', 'Destination')" style="cursor:pointer;" />
+              </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="bkDate" />
+            </div>
+            <div class="form-group">
+              <label>Time</label>
+              <input type="time" id="bkTime" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Passengers</label>
+              <select id="bkPassengers">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Cab type</label>
+              <select id="bkCabType">
+                <option value="Economic">Economic</option>
+                <option value="Premium">Premium</option>
+                <option value="Executive">Executive</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:.8rem;" onclick="estimateFare()">
+            Get Fare Estimate
+          </button>
+
+          <div class="fare-box" id="fareBox">
+            <div class="fare-label">Estimated fare</div>
+            <div class="fare-amount" id="fareAmount">€0.00</div>
+            <div id="fareBreakdown" style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"></div>
+          </div>
+
+          <button class="btn btn-primary" id="confirmBookingBtn" onclick="confirmBooking()">
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-payments" style="display:none">
+      <div class="page-header">
+        <div><h2>Payments</h2><p>Transaction history and audit logs</p></div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-title">Completed Receipts</div>
+          <div id="paymentsList"><div class="empty"><div class="empty-icon">-</div><p>Loading…</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-locations" style="display:none">
+      <div class="page-header">
+        <div><h2>Saved Locations</h2><p>Manage favourite pickup spots with live weather</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openLocationModal()">+ Add Location</button>
+      </div>
+      <div class="page-body">
+        <div id="locationGrid" class="location-grid">
+          <div class="empty" style="grid-column:1/-1"><div class="empty-icon">-</div><p>Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-inbox" style="display:none">
+      <div class="page-header">
+        <div><h2>Inbox</h2><p>Your notifications and alerts</p></div>
+        <button class="btn btn-ghost btn-sm" onclick="loadInbox()">Refresh</button>
+      </div>
+      <div class="page-body">
+        <div id="inboxList">
+          <div class="empty"><div class="empty-icon">-</div><p>Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-profile" style="display:none">
+      <div class="page-header">
+        <div><h2>Profile</h2><p>Your account details</p></div>
+      </div>
+      <div class="page-body" style="max-width:480px;">
+        <div class="card">
+          <div class="alert alert-success" id="profileSuccess"></div>
+          <div class="alert alert-error" id="profileError"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>First name</label>
+              <input type="text" id="profFirst" />
+            </div>
+            <div class="form-group">
+              <label>Surname</label>
+              <input type="text" id="profLast" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="profEmail" disabled style="opacity:.5;" />
+          </div>
+          <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="mapPickerModal">
+  <div class="modal" style="max-width: 600px; width: 90%;">
+    <div class="modal-header">
+      <h3 id="mapPickerTitle">Select Location</h3>
+      <button class="modal-close" onclick="closeModal('mapPickerModal')">✕</button>
+    </div>
+    <p style="margin-bottom: 1rem; color: var(--muted); font-size: 0.9rem;">
+      Tap anywhere on the map to set your exact location.
+    </p>
+    <div id="leafletMap" style="height: 400px; width: 100%; border-radius: 8px; background: #e5e5e5;"></div>
+    
+    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+      <input type="text" id="selectedCoords" disabled style="flex: 1;" placeholder="Coordinates will appear here" />
+      <button class="btn btn-primary" onclick="confirmLocation()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="locationModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="locationModalTitle">Add Location</h3>
+      <button class="modal-close" onclick="closeLocationModal()">✕</button>
+    </div>
+    <div class="alert alert-error" id="locError"></div>
+    <div class="form-group">
+      <label>Location name</label>
+      <input type="text" id="locName" placeholder="e.g. Home, Office" />
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="locAddress" placeholder="Full address" />
+    </div>
+    <input type="hidden" id="locEditId" />
+    <button class="btn btn-primary" onclick="saveLocation()">Save Location</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Pay for Booking</h3>
+      <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+    </div>
+    <div id="payModalBody"></div>
+    <div class="alert alert-error" id="payError"></div>
+    <div class="alert alert-success" id="paySuccess"></div>
+    <button class="btn btn-primary" id="payBtn" onclick="processPayment()">Confirm Payment</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const customer = JSON.parse(localStorage.getItem('cabx_customer') || 'null');
+if (!customer) window.location.href = 'index.html';
+
+const pages = ['overview','bookings','new-booking','payments','locations','inbox','profile'];
+
+function showPage(name, navEl) {
+  pages.forEach(p => document.getElementById('page-'+p).style.display = 'none');
+  document.getElementById('page-'+name).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  if (name === 'overview')     loadOverview();
+  if (name === 'bookings')     loadBookings('current');
+  if (name === 'payments')     loadPayments();
+  if (name === 'locations')    loadLocations();
+  if (name === 'inbox')        loadInbox();
+  if (name === 'profile')      loadProfile();
+  if (name === 'new-booking')  initNewBooking();
+}
+
+document.getElementById('sidebarName').textContent  = [customer?.firstname, customer?.surname].filter(Boolean).join(' ') || customer?.name || 'User';
+document.getElementById('sidebarEmail').textContent = customer?.email || '';
+
+const hr = new Date().getHours();
+const greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+document.getElementById('overviewGreeting').textContent = `${greet}, ${customer?.firstname || 'there'}!`;
+
+async function loadOverview() {
+  try {
+    const cid = customer._id || customer.id;
+    const [current, past, inbox] = await Promise.allSettled([
+      API.getCurrentBookings(cid),
+      API.getPastBookings(cid),
+      API.getInbox(cid),
+    ]);
+
+    const bk = [
+      ...(current.status === 'fulfilled' ? (Array.isArray(current.value) ? current.value : []) : []),
+      ...(past.status    === 'fulfilled' ? (Array.isArray(past.value)    ? past.value    : []) : []),
+    ];
+    
+    const localPaid = JSON.parse(localStorage.getItem('cabx_paid_bookings') || '[]');
+    const paidBookings = bk.filter(b => b.status === 'paid' || b.status === 'completed' || localPaid.includes(b._id || b.id));
+    const totalSpent = paidBookings.reduce((s, b) => s + (parseFloat(b.amount || b.estimatedPrice || 0)), 0);
+    
+    const active = bk.filter(b => b.status === 'active' || b.status === 'confirmed' || b.status === 'pending' || b.status === 'current');
+    const ib = inbox.status === 'fulfilled' ? (Array.isArray(inbox.value) ? inbox.value : []) : [];
+    const unread = ib.filter(n => !n.read).length;
+
+    document.getElementById('statTotal').textContent  = bk.length;
+    document.getElementById('statActive').textContent = active.length - paidBookings.filter(b => bk.includes(b)).length;
+    document.getElementById('statSpent').textContent  = totalSpent.toFixed(2);
+    document.getElementById('statInbox').textContent  = unread;
+
+    if (unread > 0) {
+      document.getElementById('inboxBadge').textContent = unread;
+      document.getElementById('inboxBadge').style.display = 'inline';
+    } else {
+      document.getElementById('inboxBadge').style.display = 'none';
+    }
+
+    const recent = bk.slice(0, 5);
+    document.getElementById('recentBookings').innerHTML = recent.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr><th>From</th><th>To</th><th>Date</th><th>Type</th><th>Status</th></tr></thead>
+          <tbody>${recent.map(b => {
+            const isPaid = localPaid.includes(b._id || b.id) || b.status === 'paid' || b.status === 'completed';
+            return `
+            <tr>
+              <td>${b.startLocation || '—'}</td>
+              <td>${b.endLocation || '—'}</td>
+              <td>${formatDate(b.date || b.dateTime || b.createdAt)}</td>
+              <td>${b.cabType || '—'}</td>
+              <td>${isPaid ? statusBadge('paid') : statusBadge(b.status)}</td>
+            </tr>`}).join('')}
+          </tbody></table></div>`
+      : `<div class="empty"><div class="empty-icon">-</div><p>No bookings yet. <a href="#" onclick="showPage('new-booking', document.querySelector('[data-page=new-booking]'))" style="color:var(--gold)">Book your first ride</a>.</p></div>`;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function loadBookings(type = 'current') {
+  const el = document.getElementById('bookingsList');
+  el.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const cid = customer._id || customer.id;
+    const res  = type === 'past'
+      ? await API.getPastBookings(cid)
+      : await API.getCurrentBookings(cid);
+    const list = Array.isArray(res) ? res : [];
+
+    const localPaid = JSON.parse(localStorage.getItem('cabx_paid_bookings') || '[]');
+
+    el.innerHTML = list.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr><th>From</th><th>To</th><th>Date & Time</th><th>Pax</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>${list.map(b => {
+            const statusLower = (b.status || '').toLowerCase();
+            const isAlreadyPaid = statusLower === 'paid' || statusLower === 'completed' || localPaid.includes(b._id || b.id);
+            
+            const actionCell = isAlreadyPaid 
+              ? `<span style="color: #4cd137; font-weight: 600; font-size: 0.85rem;">Settled</span>`
+              : `<button class="btn btn-ghost btn-sm" onclick="openPayModal('${b._id||b.id}', '${b.cabType}', ${b.passengers||1}, '${b.dateTime}', '${b.dep_lat}', '${b.dep_lng}', '${b.arr_lat}', '${b.arr_lng}')">Pay</button>`;
+            
+            return `
+            <tr>
+              <td>${b.startLocation || '—'}</td>
+              <td>${b.endLocation || '—'}</td>
+              <td>${formatDate(b.dateTime)}</td>
+              <td>${b.passengers || '—'}</td>
+              <td>${b.cabType || '—'}</td>
+              <td>${isAlreadyPaid ? statusBadge('paid') : statusBadge(b.status)}</td>
+              <td>${actionCell}</td>
+            </tr>`
+          }).join('')}
+          </tbody></table></div>`
+      : `<div class="empty"><div class="empty-icon">-</div><p>No ${type} bookings found.</p></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty"><p style="color:var(--danger)">Failed to load bookings.</p></div>`;
+  }
+}
+
+function initNewBooking() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('bkDate').min = today;
+  document.getElementById('fareBox').classList.remove('show');
+  document.getElementById('bookingError').classList.remove('show');
+  document.getElementById('bookingSuccess').classList.remove('show');
+}
+
+let lastFare = 0;
+async function estimateFare() {
+  const fromInput = document.getElementById('bkFrom');
+  const toInput   = document.getElementById('bkTo');
+  
+  const pax  = document.getElementById('bkPassengers').value;
+  const cab  = document.getElementById('bkCabType').value;
+  const date = document.getElementById('bkDate').value || new Date().toISOString().split('T')[0];
+  const time = document.getElementById('bkTime').value || '12:00';
+
+  if (!fromInput.value || !toInput.value) { 
+    alert('Please enter pickup and destination first.'); 
+    return; 
+  }
+
+  document.getElementById('fareAmount').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('fareBox').classList.add('show');
+
+  try {
+    const response = await fetch('http://localhost:3000/api/payments/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            startLocation: fromInput.value, 
+            endLocation: toInput.value, 
+            dep_lat: fromInput.dataset.lat, 
+            dep_lng: fromInput.dataset.lng,
+            arr_lat: toInput.dataset.lat,
+            arr_lng: toInput.dataset.lng,
+            cabType: cab, 
+            passengers: parseInt(pax), 
+            dateTime: `${date}T${time}` 
+        })
+    });
+    
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'API Calculation Failed');
+
+    document.getElementById('fareAmount').textContent = `€${data.estimatedPrice.toFixed(2)}`;
+    document.getElementById('fareBreakdown').textContent = `Based on live API route data.`;
+  } catch (err) {
+    document.getElementById('fareAmount').textContent = `Error`;
+    document.getElementById('fareBreakdown').textContent = err.message;
+  }
+}
+
+async function confirmBooking() {
+  const btn = document.getElementById('confirmBookingBtn');
+  const err = document.getElementById('bookingError');
+  const ok  = document.getElementById('bookingSuccess');
+  err.classList.remove('show'); ok.classList.remove('show');
+
+  const fromInput = document.getElementById('bkFrom');
+  const toInput   = document.getElementById('bkTo');
+  
+  const date = document.getElementById('bkDate').value;
+  const time = document.getElementById('bkTime').value;
+  const pax  = document.getElementById('bkPassengers').value;
+  const cab  = document.getElementById('bkCabType').value;
+
+  if (!fromInput.value || !toInput.value || !date || !time) {
+    err.textContent = 'Please fill in all booking details.';
+    err.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Booking…';
+
+  try {
+    const payload = {
+      customerId:    customer._id || customer.id,
+      startLocation: fromInput.value,
+      endLocation:   toInput.value,
+      dep_lat:       fromInput.dataset.lat, 
+      dep_lng:       fromInput.dataset.lng,
+      arr_lat:       toInput.dataset.lat,
+      arr_lng:       toInput.dataset.lng,
+      dateTime:      `${date}T${time}`,
+      passengers:    parseInt(pax),
+      cabType:       cab,
+    };
+    
+    await API.createBooking(payload);
+    
+    ok.textContent = 'Booking confirmed! Your driver will be assigned shortly.';
+    ok.classList.add('show');
+    
+    fromInput.value = '';
+    toInput.value = '';
+    delete fromInput.dataset.lat;
+    delete fromInput.dataset.lng;
+    delete toInput.dataset.lat;
+    delete toInput.dataset.lng;
+    document.getElementById('bkDate').value = '';
+    document.getElementById('bkTime').value = '';
+    
+    document.getElementById('fareBox').classList.remove('show');
+  } catch (e) {
+    err.textContent = e.message || 'Booking failed. Please try again.';
+    err.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirm Booking';
+  }
+}
+
+async function loadPayments() {
+  const el = document.getElementById('paymentsList');
+  el.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const cid = customer._id || customer.id;
+    const [current, past] = await Promise.all([
+      API.getCurrentBookings(cid).catch(() => []),
+      API.getPastBookings(cid).catch(() => [])
+    ]);
+
+    const allBookings = [...current, ...past];
+    const localPaid = JSON.parse(localStorage.getItem('cabx_paid_bookings') || '[]');
+    
+    const completedTransactions = allBookings.filter(b => {
+      const statusLower = (b.status || '').toLowerCase();
+      return statusLower === 'paid' || statusLower === 'completed' || localPaid.includes(b._id || b.id);
+    });
+
+    if (!completedTransactions.length) {
+      el.innerHTML = `<div class="empty">
+        <div class="empty-icon">-</div>
+        <p>No processing logs found.<br>Use the Pay button on active bookings to transact.</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Reference</th><th>Route</th><th>Date</th><th>Cab Class</th><th>Status</th></tr></thead>
+        <tbody>${completedTransactions.map(t => `
+          <tr>
+            <td><code>${(t._id || t.id).slice(-8)}</code></td>
+            <td>${t.startLocation || '—'} -> ${t.endLocation || '—'}</td>
+            <td>${formatDate(t.dateTime || t.createdAt)}</td>
+            <td>${t.cabType || '—'}</td>
+            <td><span class="badge badge-success">Completed</span></td>
+          </tr>`).join('')}
+        </tbody></table></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty"><p style="color:var(--danger)">Failed to synchronize ledger logs.</p></div>`;
+  }
+}
+
+let payingBookingId = null, payingAmount = 0;
+let payingBooking = null;
+
+async function openPayModal(bookingId, cabType, passengers, dateTime, dep_lat, dep_lng, arr_lat, arr_lng) {
+  payingBookingId = bookingId;
+  payingBooking   = { bookingId, cabType, passengers, dateTime, dep_lat, dep_lng, arr_lat, arr_lng };
+  
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = true;
+
+  document.getElementById('payModalBody').innerHTML =
+    `<p style="margin-bottom:1rem;color:var(--muted)">Booking ref: <code>${bookingId.slice(-8)}</code></p>
+     <div class="fare-box show" style="margin-bottom:1.2rem;">
+       <div class="fare-label">Total Amount Due</div>
+       <div class="fare-amount" id="modalLivePrice"><span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Calculating live API fare...</div>
+     </div>`;
+  document.getElementById('payError').classList.remove('show');
+  document.getElementById('paySuccess').classList.remove('show');
+  openModal('payModal');
+
+  try {
+    const response = await fetch('http://localhost:3000/api/payments/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dep_lat, dep_lng, arr_lat, arr_lng, cabType, passengers, dateTime })
+    });
+    
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'API calculation failed');
+
+    payingAmount = data.estimatedPrice;
+    document.getElementById('modalLivePrice').textContent = `€${payingAmount.toFixed(2)}`;
+    payBtn.disabled = false;
+
+  } catch (err) {
+    document.getElementById('modalLivePrice').textContent = `Error`;
+    document.getElementById('payError').textContent = err.message;
+    document.getElementById('payError').classList.add('show');
+  }
+}
+
+async function processPayment() {
+  const btn = document.getElementById('payBtn');
+  const err = document.getElementById('payError');
+  const ok  = document.getElementById('paySuccess');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await API.processPayment({
+      bookingId:  payingBookingId,
+      customerId: customer._id || customer.id,
+      cabType:    payingBooking?.cabType    || 'Economic',
+      passengers: payingBooking?.passengers || 1,
+      dateTime:   payingBooking?.dateTime   || new Date().toISOString(),
+      dep_lat:    payingBooking?.dep_lat,
+      dep_lng:    payingBooking?.dep_lng,
+      arr_lat:    payingBooking?.arr_lat,
+      arr_lng:    payingBooking?.arr_lng
+    });
+
+    let localPaid = JSON.parse(localStorage.getItem('cabx_paid_bookings') || '[]');
+    if (!localPaid.includes(payingBookingId)) {
+      localPaid.push(payingBookingId);
+      localStorage.setItem('cabx_paid_bookings', JSON.stringify(localPaid));
+    }
+
+    ok.textContent = 'Payment successful!'; ok.classList.add('show');
+    
+    setTimeout(() => { 
+      closeModal('payModal'); 
+      loadOverview();
+      loadBookings('current');
+    }, 1200);
+  } catch (e) {
+    err.textContent = e.message || 'Payment failed.'; err.classList.add('show');
+    btn.disabled = false; btn.textContent = 'Confirm Payment';
+  }
+}
+
+async function loadLocations() {
+  const grid = document.getElementById('locationGrid');
+  grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spinner"></span></div>';
+  try {
+    const res   = await API.getLocations(customer._id || customer.id);
+    const locs  = Array.isArray(res) ? res : (res.locations || []);
+    await Promise.allSettled(locs.map(async loc => {
+      try {
+        const w = await API.getWeather(loc._id || loc.id);
+        loc.weather = w.weather;
+      } catch(e) { loc.weather = null; }
+    }));
+    if (!locs.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">-</div><p>No saved locations. Add one!</p></div>';
+      return;
+    }
+    grid.innerHTML = locs.map(loc => `
+      <div class="location-card">
+        <div class="loc-name">${loc.name}</div>
+        <div class="loc-address">${loc.address || ''}</div>
+        ${loc.weather ? `
+          <div class="weather-info">
+            <span class="weather-temp">${loc.weather.temp_c || loc.weather.temp}°C</span>
+            <span>${loc.weather.condition || ''}</span>
+          </div>` : '<div class="weather-info" style="opacity:.4">Weather unavailable</div>'}
+        <div class="loc-actions">
+          <button class="btn btn-ghost btn-sm" onclick="editLocation('${loc._id||loc.id}','${loc.name}','${loc.address||''}')" >Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLocation('${loc._id||loc.id}')">Remove</button>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><p style="color:var(--danger)">Failed to load locations.</p></div>`;
+  }
+}
+
+function openLocationModal() {
+  document.getElementById('locationModalTitle').textContent = 'Add Location';
+  document.getElementById('locName').value    = '';
+  document.getElementById('locAddress').value = '';
+  document.getElementById('locEditId').value  = '';
+  document.getElementById('locError').classList.remove('show');
+  openModal('locationModal');
+}
+
+function editLocation(id, name, address) {
+  document.getElementById('locationModalTitle').textContent = 'Edit Location';
+  document.getElementById('locEditId').value  = id;
+  document.getElementById('locName').value    = name;
+  document.getElementById('locAddress').value = address;
+  openModal('locationModal');
+}
+
+async function saveLocation() {
+  const id      = document.getElementById('locEditId').value;
+  const name    = document.getElementById('locName').value.trim();
+  const address = document.getElementById('locAddress').value.trim();
+  const err     = document.getElementById('locError');
+  err.classList.remove('show');
+
+  if (!name || !address) { 
+    err.textContent = 'Name and address are required.'; 
+    err.classList.add('show'); 
+    return; 
+  }
+
+  const payload = { customerId: customer._id || customer.id, name, address };
+  try {
+    if (id) {
+      await API.updateLocation(id, payload);
+    } else {
+      await API.addLocation(payload);
+    }
+    closeLocationModal();
+    loadLocations();
+  } catch (e) {
+    err.textContent = e.message || 'Failed to save location.'; err.classList.add('show');
+  }
+}
+
+async function deleteLocation(id) {
+  if (!confirm('Remove this location?')) return;
+  try {
+    await API.deleteLocation(id);
+    loadLocations();
+  } catch (e) { alert(e.message || 'Delete failed.'); }
+}
+
+function closeLocationModal() { closeModal('locationModal'); }
+
+async function loadInbox() {
+  const el = document.getElementById('inboxList');
+  el.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const res  = await API.getInbox(customer._id || customer.id);
+    const list = res.notifications || res || [];
+    if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">-</div><p>Your inbox is empty.</p></div>'; return; }
+    el.innerHTML = list.reverse().map(n => `
+      <div class="inbox-item ${n.read ? '' : 'unread'}">
+        <div class="inbox-icon">${iconFor(n.type)}</div>
+        <div>
+          <div class="inbox-title">${n.title || n.subject || 'Notification'}</div>
+          <div class="inbox-body">${n.message || n.body || ''}</div>
+          <div class="inbox-time">${formatDate(n.createdAt)}</div>
+        </div>
+      </div>`).join('');
+
+    const unread = list.filter(n => !n.read).length;
+    document.getElementById('inboxBadge').textContent = unread || '';
+    document.getElementById('inboxBadge').style.display = unread ? 'inline' : 'none';
+    document.getElementById('statInbox').textContent = unread;
+  } catch (e) {
+    el.innerHTML = `<div class="empty"><p style="color:var(--danger)">Failed to load inbox.</p></div>`;
+  }
+}
+
+function iconFor(type) {
+  if (type === 'discount')      return '[Promo]';
+  if (type === 'ride_ready')    return '[Alert]';
+  if (type === 'payment')       return '[Pay]';
+  return '[Info]';
+}
+
+function loadProfile() {
+  document.getElementById('profFirst').value = customer?.firstname || '';
+  document.getElementById('profLast').value  = customer?.surname  || '';
+  document.getElementById('profEmail').value = customer?.email     || '';
+}
+
+async function saveProfile() {
+  const ok  = document.getElementById('profileSuccess');
+  const err = document.getElementById('profileError');
+  ok.classList.remove('show'); err.classList.remove('show');
+  const firstname = document.getElementById('profFirst').value.trim();
+  const surname   = document.getElementById('profLast').value.trim();
+  try {
+    const merged = { ...customer, firstname, surname };
+    localStorage.setItem('cabx_customer', JSON.stringify(merged));
+    document.getElementById('sidebarName').textContent = `${firstname} ${surname}`;
+    ok.textContent = 'Profile updated!'; ok.classList.add('show');
+  } catch (e) {
+    err.textContent = e.message || 'Update failed.'; err.classList.add('show');
+  }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+function logout() {
+  localStorage.removeItem('cabx_token');
+  localStorage.removeItem('cabx_customer');
+  window.location.href = 'index.html';
+}
+
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return isNaN(d) ? str : d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function statusBadge(status) {
+  const map = {
+    active:    'badge-info',
+    confirmed: 'badge-info',
+    pending:   'badge-warning',
+    completed: 'badge-success',
+    paid:      'badge-success',
+    cancelled: 'badge-danger',
+  };
+  const cls = map[(status||'').toLowerCase()] || 'badge-info';
+  return `<span class="badge ${cls}">${status || 'unknown'}</span>`;
+}
+
+let pickerMap = null;
+let pickerMarker = null;
+let activeTargetField = null;
+let tempLat = null;
+let tempLng = null;
+
+function openMapPicker(targetId, title) {
+  activeTargetField = targetId;
+  document.getElementById('mapPickerTitle').textContent = `Select ${title} Location`;
+  document.getElementById('selectedCoords').value = '';
+  
+  openModal('mapPickerModal');
+
+  if (!pickerMap) {
+    pickerMap = L.map('leafletMap').setView([35.9375, 14.3976], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(pickerMap);
+
+    pickerMap.on('click', function(e) {
+      tempLat = e.latlng.lat.toFixed(5);
+      tempLng = e.latlng.lng.toFixed(5);
+      
+      if (!pickerMarker) pickerMarker = L.marker([tempLat, tempLng]).addTo(pickerMap);
+      else pickerMarker.setLatLng([tempLat, tempLng]);
+      
+      document.getElementById('selectedCoords').value = "Translating to street address...";
+
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${tempLat}&lon=${tempLng}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.display_name) document.getElementById('selectedCoords').value = data.display_name;
+            else document.getElementById('selectedCoords').value = `${tempLat}, ${tempLng}`;
+        })
+        .catch(err => document.getElementById('selectedCoords').value = `${tempLat}, ${tempLng}`);
+    });
+  }
+
+  setTimeout(() => {
+    pickerMap.invalidateSize();
+  }, 100);
+}
+
+function confirmLocation() {
+  const address = document.getElementById('selectedCoords').value;
+  if (!address || !tempLat) {
+    alert("Please click on the map to select a location first.");
+    return;
+  }
+  
+  const targetInput = document.getElementById(activeTargetField);
+  targetInput.value = address; 
+  
+  targetInput.dataset.lat = tempLat;
+  targetInput.dataset.lng = tempLng;
+  
+  closeModal('mapPickerModal');
+}
+
+loadOverview();
+</script>
+
+</body>
+</html>

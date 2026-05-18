@@ -5,9 +5,11 @@ const Booking = require('../models/Booking');
 
 router.post('/', async (req, res) => {
     try {
-        const { customerId, startLocation, endLocation, dateTime, passengers, cabType } = req.body;
+        const { customerId, startLocation, endLocation, dep_lat, dep_lng, arr_lat, arr_lng, dateTime, passengers, cabType } = req.body;
         
-        const newBooking = new Booking({ customerId, startLocation, endLocation, dateTime, passengers, cabType });
+        const newBooking = new Booking({ 
+            customerId, startLocation, endLocation, dep_lat, dep_lng, arr_lat, arr_lng, dateTime, passengers, cabType 
+        });
         await newBooking.save();
 
         const totalBookings = await Booking.countDocuments({ customerId: customerId });
@@ -59,7 +61,7 @@ router.get('/customer/:customerId/current', async (req, res) => {
 });
 
 
-router.get('customer/:customerId/past', async (req, res) => {
+router.get('/customer/:customerId/past', async (req, res) => {
     try{
         const pastBookings = await Booking.find({ customerId: req.params.customerId, status: { $in: ['completed', 'cancelled'] } }).sort({dateTime: -1});
 
@@ -69,6 +71,15 @@ router.get('customer/:customerId/past', async (req, res) => {
     }
 
 
+});
+
+router.delete('/reset', async (req, res) => {
+    try {
+        await Booking.deleteMany({});
+        res.status(200).json({ message: 'Database clean slate: All bookings have been deleted!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting bookings', error: error.message });
+    }
 });
 
 module.exports = router;

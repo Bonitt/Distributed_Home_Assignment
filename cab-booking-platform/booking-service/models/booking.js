@@ -4,8 +4,12 @@ const bookingSchema = new mongoos.Schema({
     customerId: { type: mongoos.Schema.Types.ObjectId, ref: 'Customer', required: true },
     startLocation: {type: String, required: true},
     endLocation: {type: String, required: true},
+    dep_lat: {type: Number, required: true},
+    dep_lng: {type: Number, required: true},
+    arr_lat: {type: Number, required: true},
+    arr_lng: {type: Number, required: true},
     dateTime: {type: String, required: true},
-    passengers: {type: Number, requied: true, min: 1, max: 8},
+    passengers: {type: Number, required: true, min: 1, max: 8},
     cabType:{
         type: String,
         enum: ['Economic', 'Premium', 'Executive'],

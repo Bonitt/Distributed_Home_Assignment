@@ -6,6 +6,11 @@ router.post('/register', async (req, res) => {
     try{
         const { firstname, surname, email, password } = req.body;
 
+        const existingCustomer = await Customer.findOne({ email });
+        if (existingCustomer) {
+            return res.status(400).json({ error: "Email already in use" });
+        }
+
         const newCustomer = new Customer({ firstname, surname, email, password });
         await newCustomer.save();
 

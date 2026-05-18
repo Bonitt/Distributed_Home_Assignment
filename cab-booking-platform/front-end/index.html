@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CabX — Sign In</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <!-- Hero panel -->
+  <div class="auth-hero">
+    <div class="hero-content">
+      <div class="hero-badge">🚖 Premium Cab Service</div>
+      <div class="brand">CabX</div>
+      <p class="tagline">Rides that arrive before you worry.</p>
+    </div>
+  </div>
+
+  <!-- Form panel -->
+  <div class="auth-panel" style="background: var(--bg);">
+    <div class="auth-form-wrap">
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-sub">Sign in to your CabX account</p>
+
+      <div class="alert alert-error" id="loginError"></div>
+      <div class="alert alert-success" id="loginSuccess"></div>
+
+      <div class="form-group">
+        <label>Email address</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
+        Sign In
+      </button>
+
+      <div class="auth-link">
+        Don't have an account? <a href="register.html">Create one</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Redirect if already logged in
+  if (localStorage.getItem('cabx_token')) {
+    window.location.href = 'dashboard.html';
+  }
+
+  async function handleLogin() {
+    const btn   = document.getElementById('loginBtn');
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPassword').value;
+    const err   = document.getElementById('loginError');
+    const ok    = document.getElementById('loginSuccess');
+
+    err.classList.remove('show'); ok.classList.remove('show');
+
+    if (!email || !pass) {
+      err.textContent = 'Please fill in all fields.';
+      err.classList.add('show'); return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+    try {
+      const res = await API.loginCustomer({ email, password: pass });
+      // Backend returns { message, customerId } — fetch full details
+      const customerId = res.customerId;
+      if (!customerId) throw new Error('Login failed: no customer ID returned.');
+      const customer = await API.getCustomer(customerId);
+      localStorage.setItem('cabx_token',    customerId); // no JWT in current backend
+      localStorage.setItem('cabx_customer', JSON.stringify(customer));
+      ok.textContent = 'Logged in! Redirecting…';
+      ok.classList.add('show');
+      setTimeout(() => window.location.href = 'dashboard.html', 800);
+    } catch (e) {
+      err.textContent = e.message || 'Invalid credentials.';
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+
+  // Allow Enter key
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+</script>
+</body>
+</html>
